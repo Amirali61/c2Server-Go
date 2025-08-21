@@ -5,5 +5,6 @@ type NewBeacon struct {
 }
 
 type NewTask struct {
+	ID      string `json:"id"`
 	Command string `json:"command"`
 }
