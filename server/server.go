@@ -78,9 +78,28 @@ func taskHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(tasks)
 }
 
+func answerHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Only POST allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var ans models.NewAnswer
+	if err := json.NewDecoder(r.Body).Decode(&ans); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	fmt.Println(ans.Answer)
+}
+
 func runServer() {
 	http.HandleFunc("/beacon", beaconHandler)
 	http.HandleFunc("/task", taskHandler)
+	http.HandleFunc("/answer", answerHandler)
 	fmt.Println("Server started on port 5000")
 	log.Fatal(http.ListenAndServe(":5000", nil))
 }

@@ -8,3 +8,8 @@ type NewTask struct {
 	ID      string `json:"id"`
 	Command string `json:"command"`
 }
+
+type NewAnswer struct {
+	ID     string `json:"id"`
+	Answer string `json:"answer"`
+}
