@@ -15,7 +15,7 @@ func sendBeacon(id string) *http.Response {
 	var beacon models.NewBeacon
 	beacon.ID = id
 
-	jsonData, err := encodeBeacon(beacon)
+	jsonData, err := json.Marshal(beacon)
 	if err != nil {
 		panic(err)
 	}
@@ -24,10 +24,6 @@ func sendBeacon(id string) *http.Response {
 		panic(err)
 	}
 	return resp
-}
-
-func encodeBeacon(beacon models.NewBeacon) ([]byte, error) {
-	return json.Marshal(beacon)
 }
 
 func recvTask(r *http.Response) string {
