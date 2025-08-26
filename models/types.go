@@ -13,8 +13,9 @@ type NewTask struct {
 }
 
 type NewAnswer struct {
-	ID     string `json:"id"`
-	Answer string `json:"answer"`
+	ID      string `json:"id"`
+	Command string `json:"command"`
+	Answer  string `json:"answer"`
 }
 
 type Agent struct {

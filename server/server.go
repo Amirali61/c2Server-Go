@@ -88,7 +88,7 @@ func answerHandler(w http.ResponseWriter, r *http.Request) {
 	mu.Lock()
 	defer mu.Unlock()
 	if ans.Answer != "" {
-		fmt.Println(ans.Answer)
+		fmt.Printf("Agent %s Command => %s\n Answer=> \n%s", ans.ID, ans.Command, ans.Answer)
 	}
 
 }

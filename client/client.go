@@ -40,6 +40,7 @@ func sendAnswer(id string, cmd string) {
 	var answer models.NewAnswer
 	var command *exec.Cmd
 	answer.ID = id
+	answer.Command = cmd
 	if runtime.GOOS == "windows" {
 		command = exec.Command("cmd", "/C", cmd)
 	} else {
