@@ -87,8 +87,10 @@ func answerHandler(w http.ResponseWriter, r *http.Request) {
 
 	mu.Lock()
 	defer mu.Unlock()
+	if ans.Answer != "" {
+		fmt.Println(ans.Answer)
+	}
 
-	fmt.Println(ans.Answer)
 }
 
 func decodeBeacon(r *http.Request) (models.NewBeacon, error) {
